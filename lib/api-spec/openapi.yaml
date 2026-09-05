@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: referrals
+    description: Referral review and prioritisation operations
+  - name: dashboard
+    description: Operational summary data
+  - name: appointments
+    description: Appointment slot operations
 paths:
   /healthz:
     get:
@@ -24,7 +30,155 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get referral operations summary
+      responses:
+        "200":
+          description: Summary of current referral workload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /referrals:
+    get:
+      operationId: listReferrals
+      tags: [referrals]
+      summary: List referrals for clinical review
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [needs_review, reviewed, booked, declined]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [urgent, soon, routine]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Referral list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Referral"
+    post:
+      operationId: createReferral
+      tags: [referrals]
+      summary: Create a referral from structured clinical information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralInput"
+      responses:
+        "201":
+          description: Created referral
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Referral"
+  /referrals/{id}:
+    get:
+      operationId: getReferral
+      tags: [referrals]
+      summary: Get a referral and its prioritisation evidence
+      parameters:
+        - $ref: "#/components/parameters/ReferralId"
+      responses:
+        "200":
+          description: Referral detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Referral"
+        "404":
+          description: Referral not found
+    patch:
+      operationId: reviewReferral
+      tags: [referrals]
+      summary: Record a clinician review or override
+      parameters:
+        - $ref: "#/components/parameters/ReferralId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReferralReviewInput"
+      responses:
+        "200":
+          description: Updated referral
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Referral"
+        "404":
+          description: Referral not found
+  /appointment-slots:
+    get:
+      operationId: listAppointmentSlots
+      tags: [appointments]
+      summary: List available appointment slots
+      parameters:
+        - name: specialty
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Available slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentSlot"
+  /referrals/{id}/book:
+    post:
+      operationId: bookReferral
+      tags: [appointments]
+      summary: Book a referral into an appointment slot
+      parameters:
+        - $ref: "#/components/parameters/ReferralId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "200":
+          description: Booked referral
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Referral"
+        "404":
+          description: Referral or slot not found
 components:
+  parameters:
+    ReferralId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +187,206 @@ components:
           type: string
       required:
         - status
+    Referral:
+      type: object
+      required:
+        - id
+        - patientReference
+        - patientName
+        - dateOfBirth
+        - postcode
+        - specialty
+        - referrer
+        - receivedAt
+        - status
+        - priority
+        - priorityScore
+        - confidence
+        - summary
+        - symptoms
+        - evidence
+        - waitingDays
+        - targetDays
+      properties:
+        id:
+          type: string
+        patientReference:
+          type: string
+        patientName:
+          type: string
+        dateOfBirth:
+          type: string
+        postcode:
+          type: string
+        specialty:
+          type: string
+        referrer:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [needs_review, reviewed, booked, declined]
+        priority:
+          type: string
+          enum: [urgent, soon, routine]
+        priorityScore:
+          type: number
+        confidence:
+          type: number
+        summary:
+          type: string
+        symptoms:
+          type: array
+          items:
+            type: string
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrioritisationEvidence"
+        waitingDays:
+          type: number
+        targetDays:
+          type: number
+        clinicianPriority:
+          type: [string, "null"]
+          enum: [urgent, soon, routine, null]
+        clinicianNote:
+          type: [string, "null"]
+        bookedSlotId:
+          type: [string, "null"]
+    ReferralInput:
+      type: object
+      required:
+        - patientReference
+        - patientName
+        - dateOfBirth
+        - postcode
+        - specialty
+        - referrer
+        - summary
+        - symptoms
+      properties:
+        patientReference:
+          type: string
+          minLength: 1
+        patientName:
+          type: string
+          minLength: 1
+        dateOfBirth:
+          type: string
+        postcode:
+          type: string
+        specialty:
+          type: string
+        referrer:
+          type: string
+        summary:
+          type: string
+        symptoms:
+          type: array
+          items:
+            type: string
+    ReferralReviewInput:
+      type: object
+      required:
+        - decision
+      properties:
+        decision:
+          type: string
+          enum: [urgent, soon, routine, decline]
+        note:
+          type: [string, "null"]
+        reviewer:
+          type: string
+          default: "Dr. A. Patel"
+    PrioritisationEvidence:
+      type: object
+      required:
+        - label
+        - detail
+        - contribution
+        - type
+      properties:
+        label:
+          type: string
+        detail:
+          type: string
+        contribution:
+          type: number
+        type:
+          type: string
+          enum: [clinical, waiting_time, safety_net]
+    DashboardSummary:
+      type: object
+      required:
+        - totalReferrals
+        - needsReview
+        - urgent
+        - dueThisWeek
+        - bookedToday
+        - averageReviewHours
+        - lastUpdated
+        - specialtyBreakdown
+      properties:
+        totalReferrals:
+          type: number
+        needsReview:
+          type: number
+        urgent:
+          type: number
+        dueThisWeek:
+          type: number
+        bookedToday:
+          type: number
+        averageReviewHours:
+          type: number
+        lastUpdated:
+          type: string
+          format: date-time
+        specialtyBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpecialtyCount"
+    SpecialtyCount:
+      type: object
+      required: [specialty, count]
+      properties:
+        specialty:
+          type: string
+        count:
+          type: number
+    AppointmentSlot:
+      type: object
+      required:
+        - id
+        - specialty
+        - clinician
+        - location
+        - startsAt
+        - durationMinutes
+        - available
+      properties:
+        id:
+          type: string
+        specialty:
+          type: string
+        clinician:
+          type: string
+        location:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: number
+        available:
+          type: boolean
+    BookingInput:
+      type: object
+      required: [slotId]
+      properties:
+        slotId:
+          type: string
 

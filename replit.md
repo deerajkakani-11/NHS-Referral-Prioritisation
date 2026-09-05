@@ -1,6 +1,6 @@
-# [Project name]
+# NHS Referral Prioritisation
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+An explainable, clinician-led workspace for reviewing NHS-style referrals and allocating appointment slots using synthetic data.
 
 ## Run & Operate
 
@@ -22,23 +22,36 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/nhs-referral-prioritisation/src/` — clinician dashboard, referral queue/detail, appointments, and settings UI
+- `artifacts/api-server/src/routes/referrals.ts` — referral, dashboard summary, review, appointment slots, and booking routes
+- `lib/api-spec/openapi.yaml` — source-of-truth API contract
+- `lib/db/src/schema/referrals.ts` — Drizzle schema for referrals and appointment slots
+- `lib/api-client-react/src/generated/` — generated React Query hooks
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Prioritisation is advisory rather than autonomous: each recommendation includes evidence, confidence, and a clinician override path.
+- The first build uses synthetic NHS-style data to avoid handling real patient information.
+- OpenAPI is the API contract; the React client and Zod server schemas are generated from it.
+- Confidence is stored as an integer percentage in the database and exposed as a decimal in API responses.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Review live referral workload and urgent cases
+- Filter and search referrals by status, priority, and specialty
+- Inspect traceable prioritisation evidence and confidence
+- Record a clinician decision with notes
+- Browse appointment slots and book reviewed referrals
+- View safety and advisory-mode settings
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+No preferences recorded.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Regenerate the API client after changing `lib/api-spec/openapi.yaml`.
+- Use the managed workflows for the API server and web preview so `PORT` and `BASE_PATH` are supplied.
 
 ## Pointers
 

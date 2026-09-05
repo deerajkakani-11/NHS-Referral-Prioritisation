@@ -1,0 +1,1 @@
+- [Workspace validation compatibility](workspace-validation-compatibility.md) — OpenAPI integer schemas can outpace the workspace's installed Zod major version.

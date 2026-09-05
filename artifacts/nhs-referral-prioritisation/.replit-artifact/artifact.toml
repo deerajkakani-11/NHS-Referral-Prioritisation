@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "NHS Referral Prioritisation"
+description = "A clinician-facing NHS referral and appointment prioritisation dashboard using synthetic data, explainable AI-assisted urgency scoring, human review, and audit-ready workflow controls."
+version = "1.0.0"
+id = "artifacts/nhs-referral-prioritisation"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24145
+
+[services.development]
+run = "pnpm --filter @workspace/nhs-referral-prioritisation run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nhs-referral-prioritisation", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nhs-referral-prioritisation/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24145"
+BASE_PATH = "/"
